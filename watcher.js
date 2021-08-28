@@ -181,6 +181,9 @@ function main() {
       } else {
         replyTo(request.body.message.chat.id, `${name} is not being monitored`)
       }
+    } else if (request.body?.message?.text?.startsWith('/list')) {
+      const msg = watchList.map(e => `${e.name} is being monitored at a threshold of ${e.threshold}`).join('\n')
+      replyTo(request.body.message.chat.id, msg);
     }
     reply.send()
   })
