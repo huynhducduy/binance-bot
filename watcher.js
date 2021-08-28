@@ -24,7 +24,7 @@ function notify(text) {
 }
 
 function logError(e) {
-  console.log("ERROR: " + e.toString());
+  console.error("ERROR: " + e.toString());
 }
 
 function replyTo(chatId, text) {

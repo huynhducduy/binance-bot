@@ -7,8 +7,10 @@ const channelChatId = process.env.TELEGRAM_AT_CHAT_ID;
 
 const uri = `https://api.telegram.org/bot${telegramBotKey}`;
 
+//----------------------------------------------------------------------------------------------------------------------
+
 function logError(e) {
-  console.log("ERROR: " + e.toString());
+  console.error("ERROR: " + e.toString());
 }
 
 function notify(text) {
