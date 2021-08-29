@@ -104,7 +104,7 @@ async function monitorAbnormalTradingNotices() {
 
     const periodStr = getPeriodString(data.priceChange);
 
-    let message = `<a href='${coinmarketcapMap[data.baseAsset]?.url || '#'}'>${data.baseAsset}</a> <i>(#${coinmarketcapMap[data.baseAsset]?.rank || 'NaN'})</i>`;
+    let message = `<a href='${coinmarketcapMap[data.baseAsset]?.url || '#'}'>${data.baseAsset}</a> <i>(#${coinmarketcapMap[data.baseAsset]?.rank || '0'})</i>`;
     let noti = false;
 
     if (['MINUTE_5', 'HOUR_2'].includes(data.period)) {
