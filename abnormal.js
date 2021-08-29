@@ -67,19 +67,19 @@ function getPrice(symbol) {
 
 function getPeriodString(period) {
   switch (period) {
-      case 'MINUTE_5':
-        return('5 minutes')
-      case 'HOUR_2':
-        return('2 hours')
-      case 'DAY_1':
-        return('1 day')
-      case 'WEEK_1':
-        return('1 week')
-      case 'MONTH_1':
-        return('1 month')
-      default:
-        return(period)
-    }
+    case 'MINUTE_5':
+      return '5 minutes'
+    case 'HOUR_2':
+      return '2 hours'
+    case 'DAY_1':
+      return '1 day'
+    case 'WEEK_1':
+      return '1 week'
+    case 'MONTH_1':
+      return '1 month'
+    default:
+      return period
+  }
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -102,7 +102,7 @@ async function monitorAbnormalTradingNotices() {
 
     const changeInPercentage = (data.priceChange > 0 ? "+" : "") + (data.priceChange * 100).toFixed(2) + "%";
 
-    const periodStr = getPeriodString();
+    const periodStr = getPeriodString(data.priceChange);
 
     let message = `<a href='${coinmarketcapMap[data.baseAsset]?.url || '#'}'>${data.baseAsset}</a> <i>(#${coinmarketcapMap[data.baseAsset]?.rank || 'NaN'})</i>`;
     let noti = false;
