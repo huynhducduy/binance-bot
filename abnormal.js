@@ -102,6 +102,8 @@ function monitorAbnormalTradingNotices() {
       } else if (data.eventType === "DOWN_1") {
         if (data.period === "MINUTE_5") {
           pumpCheck[data.baseAsset] -= 1;
+        } else if (data.period === "HOUR_2") {
+          pumpCheck[data.baseAsset] -= 2;
         }
         message += ` DECREASED`;
       }
@@ -124,6 +126,7 @@ function monitorAbnormalTradingNotices() {
           message += ` is rising again`
         } else if (data.eventType === 'DROP_BACK') {
           message += ` is dropping back`
+          pumpCheck[data.baseAsset] = 0;
         }
 
         message += ` (${changeInPercentage} in ${periodStr}).`
