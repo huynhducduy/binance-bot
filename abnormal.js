@@ -4,6 +4,7 @@ require('dotenv').config()
 
 const telegramBotKey = process.env.TELEGRAM_AT_BOT_KEY;
 const channelChatId = process.env.TELEGRAM_AT_CHAT_ID;
+const coinmarketcapMapUrl = 'https://api.coinmarketcap.com/data-api/v3/map/all?listing_status=active';
 
 const uri = `https://api.telegram.org/bot${telegramBotKey}`;
 
@@ -23,16 +24,32 @@ function notify(text) {
       chat_id: channelChatId,
       text: text,
       parse_mode: "html",
+      disable_web_page_preview: true,
     })
   }).catch(e => logError(e));
 }
 
-//----------------------------------------------------------------------------------------------------------------------
-
-let socket = null;
-
-const pumpCheck = {};
-const pumpThreshold = 2
+function getCoinmarketcapMap() {
+  return new Promise((resolve, reject) => {
+    fetch(coinmarketcapMapUrl)
+      .then(response => response.json())
+      .then(data => {
+        const arrayData = data.data.cryptoCurrencyMap;
+        const mapData = {};
+        arrayData.forEach(item => {
+          mapData[item.symbol] = {
+            ...item,
+            url: `https://coinmarketcap.com/currencies/${item.slug}`,
+          };
+        });
+        resolve(mapData);
+      })
+      .catch(err => {
+        logError(err);
+        reject(err);
+      });
+  })
+}
 
 function getPrice(symbol) {
   return new Promise((resolve, reject) => {
@@ -48,7 +65,32 @@ function getPrice(symbol) {
   })
 }
 
-function monitorAbnormalTradingNotices() {
+function getPeriodString(period) {
+  switch (period) {
+      case 'MINUTE_5':
+        return('5 minutes')
+      case 'HOUR_2':
+        return('2 hours')
+      case 'DAY_1':
+        return('1 day')
+      case 'WEEK_1':
+        return('1 week')
+      case 'MONTH_1':
+        return('1 month')
+      default:
+        return(period)
+    }
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+
+let socket = null;
+
+const pumpCheck = {};
+const pumpThreshold = 2
+
+async function monitorAbnormalTradingNotices() {
+  const coinmarketcapMap = await getCoinmarketcapMap();
   socket = new WebSocket('wss://bstream.binance.com:9443/stream?streams=abnormaltradingnotices');
 
   socket.on('message', async raw => {
@@ -60,34 +102,17 @@ function monitorAbnormalTradingNotices() {
 
     const changeInPercentage = (data.priceChange > 0 ? "+" : "") + (data.priceChange * 100).toFixed(2) + "%";
 
-    let periodStr = '';
+    const periodStr = getPeriodString();
 
-    switch (data.period) {
-      case 'MINUTE_5':
-        periodStr = '5 minutes'
-        break;
-      case 'HOUR_2':
-        periodStr = '2 hours'
-        break;
-      case 'DAY_1':
-        periodStr = '1 day'
-        break;
-      case 'WEEK_1':
-        periodStr = '1 week'
-        break;
-      case 'MONTH_1':
-        periodStr = '1 month'
-        break;
-      default:
-        periodStr = data.period;
-    }
+    let message = `<a href='${coinmarketcapMap[data.baseAsset]?.url || '#'}'>${data.baseAsset}</a> <i>(#${coinmarketcapMap[data.baseAsset]?.rank || 'NaN'})</i>`;
+    let noti = false;
 
     if (['MINUTE_5', 'HOUR_2'].includes(data.period)) {
       if (pumpCheck[data.baseAsset] === undefined || pumpCheck[data.baseAsset] <= 0) {
         pumpCheck[data.baseAsset] = 0;
       }
 
-      let message = `${data.baseAsset}'s price`;
+      message += `'s price`;
 
       if (data.eventType === "UP_1") {
         if (data.period === "MINUTE_5") {
@@ -108,18 +133,9 @@ function monitorAbnormalTradingNotices() {
         message += ` DECREASED`;
       }
 
-      let price = 0;
-      try {
-        price = await getPrice(data.symbol);
-      } catch (err) {
-        price = "not available"
-        logError(err)
-      }
-
-      message += ` ${changeInPercentage} within ${periodStr}. Current price is ${price}.`;
-      notify(message)
+      message += ` ${changeInPercentage} within ${periodStr}.`;
+      noti = true;
     } else {
-      let message = `${data.baseAsset}`;
 
       if (['RISE_AGAIN','DROP_BACK'].includes(data.eventType)) {
         if (data.eventType === 'RISE_AGAIN') {
@@ -130,36 +146,29 @@ function monitorAbnormalTradingNotices() {
         }
 
         message += ` (${changeInPercentage} in ${periodStr}).`
-
-        let price = 0;
-        try {
-          price = await getPrice(data.symbol);
-        } catch (err) {
-          price = "not available"
-          logError(err)
-        }
-
-        message += ` Current price is ${price}.`;
-        notify(message);
+        noti = true;
 
       } else if (['UP_BREAKTHROUGH', 'DOWN_BREAKTHROUGH'].includes(data.eventType)) {
 
-        let stateStr = data.eventType === 'UP_BREAKTHROUGH' ? 'HIGH' : 'LOW';
+        const stateStr = data.eventType === 'UP_BREAKTHROUGH' ? 'HIGH' : 'LOW';
 
         message += ` have a new ${periodStr} ${stateStr} (${changeInPercentage}).`;
-
-        let price = 0;
-        try {
-          price = await getPrice(data.symbol);
-        } catch (err) {
-          price = "not available"
-          logError(err)
-        }
-
-        message += ` Current price is ${price}.`;
-
-        notify(message);
+        noti = true
       }
+    }
+
+    if (noti === true) {
+      let price = 0;
+      try {
+        price = await getPrice(data.symbol);
+        price = `<a href='https://www.binance.com/en/trade/${data.baseAsset}_USDT?layout=pro'>${price}</a>`;
+      } catch (err) {
+        price = "not available"
+        logError(err)
+      }
+
+      message += ` Current price is ${price}.`;
+      notify(message);
     }
   })
 
@@ -187,3 +196,12 @@ monitorAbnormalTradingNotices();
 //   quotaAsset: 'BTC'
 // }
 
+// id: 5426,
+// name: "Solana",
+// symbol: "SOL",
+// slug: "solana",
+// is_active: 1,
+// status: "active",
+// first_historical_data: "2020-04-10T04:59:18.000Z",
+// last_historical_data: "2021-08-29T15:09:20.000Z",
+// rank: 9

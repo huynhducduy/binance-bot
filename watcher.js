@@ -37,6 +37,7 @@ function replyTo(chatId, text) {
       chat_id: chatId,
       text: text,
       parse_mode: "html",
+      disable_web_page_preview: true,
     })
   }).catch(e => logError(e));
 }
