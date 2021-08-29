@@ -90,7 +90,12 @@ const pumpCheck = {};
 const pumpThreshold = 2
 
 async function monitorAbnormalTradingNotices() {
-  const coinmarketcapMap = await getCoinmarketcapMap();
+  let coinmarketcapMap = await getCoinmarketcapMap();
+
+  setInterval(async function() {
+    coinmarketcapMap = await getCoinmarketcapMap()
+  }, 1000 * 60 * 60 * 24);
+
   socket = new WebSocket('wss://bstream.binance.com:9443/stream?streams=abnormaltradingnotices');
 
   socket.on('message', async raw => {
