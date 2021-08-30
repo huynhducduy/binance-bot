@@ -140,7 +140,7 @@ let watchList = [
   { name: 'BTC', threshold: 3 },
 ]
 
-function async onExiting(cmdChatId) {
+async function onExiting(cmdChatId) {
   notify("<i>Shutting down...</i>")
   await replyTo(cmdChatId, `<i>Shutting down...</i>`)
 
@@ -151,7 +151,7 @@ function async onExiting(cmdChatId) {
 }
 
 // Start
-function async main() {
+async function main() {
   await notify("<i>Starting server...</i>")
 
   watchList = watchList.map(e => ({
@@ -221,8 +221,13 @@ function async main() {
 
 main()
 
+let cleanedUp = false;
+
 process.on('SIGINT', function() {
-  notify("<b>Server is stopped!</b>").finally(function() {
-    process.exit(2)
-  })
+  if (!cleanedUp) {
+    cleanedUp = true;
+    notify("<b>Server is stopped!</b>").finally(function() {
+      process.exit(0)
+    })
+  }
 })
