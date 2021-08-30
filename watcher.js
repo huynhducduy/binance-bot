@@ -11,7 +11,7 @@ const channelChatId = process.env.TELEGRAM_PC_CHAT_ID;
 const uri = `https://api.telegram.org/bot${telegramBotKey}`;
 
 function notify(text) {
-  fetch(`${uri}/sendMessage`, {
+  return fetch(`${uri}/sendMessage`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -29,7 +29,7 @@ function logError(e) {
 }
 
 function replyTo(chatId, text) {
-  fetch(`${uri}/sendMessage`, {
+  return fetch(`${uri}/sendMessage`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -138,13 +138,26 @@ let watchList = [
   { name: 'BTC', threshold: 3 },
 ]
 
+function onExiting(cmdChatId) {
+  replyTo(cmdChatId, `<i>Shutting down...</i>`)
+  notify("<i>Shutting down...<i>")
+
+  let backupMessage = "Backup code:\n<pre>"
+  backupMessage += watchList.map(e => `/add ${e.name} ${e.threshold}`).join('\n')
+  backupMessage += "\n</pre>"
+  replyTo(cmdChatId, backupMessage)
+}
+
 // Start
 function main() {
+  notify("<i>Starting server...<i>")
 
   watchList = watchList.map(e => ({
     ...e,
     stopper: monitor(e.name, e.threshold)
   }));
+
+  notify("<b>Server started!<b>")
 
   // Declare a route
   fastify.post('/', async function (request, reply) {
@@ -186,19 +199,9 @@ function main() {
     } else if (request.body?.message?.text?.startsWith('/list')) {
       const msg = watchList.map(e => `${e.name} is being monitored at a threshold of ${e.threshold}`).join('\n')
       replyTo(request.body.message.chat.id, msg);
-    }  else if (request.body?.message?.text?.startsWith('/deploy')) {
-      const deploy = spawn( 'sh', ['/root/duy/binance-bot/duy.sh'] )
-      deploy.stdout.on('data', (data) => {
-        replyTo(request.body.message.chat.id, `Deploy message: ${data.toString()}`)
-      });
-
-      deploy.stderr.on('data', (data) => {
-        replyTo(request.body.message.chat.id, `Deploy error: ${data.toString()}`)
-      });
-
-      deploy.on( 'close', () => {
-        replyTo(request.body.message.chat.id, `<b>Successfully deployed!</b>`)
-      });
+    }  else if (request.body?.message?.text?.startsWith('/restart')) {
+      onExiting(request.body.message.chat.id);
+      spawn( 'sh', ['/root/duy/binance-bot/duy.sh'] );
     }
     reply.send()
   })
@@ -210,7 +213,14 @@ function main() {
       process.exit(1)
     }
     fastify.log.info(`server listening on ${address}`)
+    process.send('ready')
   })
 }
 
 main()
+
+process.on('SIGINT', function() {
+  notify("<b>Server is stopped!<b>").finally(function() {
+    process.exit(2)
+  })
+})
