@@ -107,7 +107,7 @@ async function monitorAbnormalTradingNotices() {
 
     const changeInPercentage = (data.priceChange > 0 ? "+" : "") + (data.priceChange * 100).toFixed(2) + "%";
 
-    const periodStr = getPeriodString(data.priceChange);
+    const periodStr = getPeriodString(data.period);
 
     let message = `<a href='${coinmarketcapMap[data.baseAsset]?.url || '#'}'>${data.baseAsset}</a> <i>(#${coinmarketcapMap[data.baseAsset]?.rank || '0'})</i>`;
     let noti = false;
