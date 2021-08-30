@@ -11,6 +11,10 @@ const channelChatId = process.env.TELEGRAM_PC_CHAT_ID;
 
 const uri = `https://api.telegram.org/bot${telegramBotKey}`;
 
+function logError(e) {
+  console.error("ERROR: " + e.toString());
+}
+
 function notify(text) {
   return fetch(`${uri}/sendMessage`, {
     method: 'POST',
@@ -21,12 +25,9 @@ function notify(text) {
       chat_id: channelChatId,
       text: text,
       parse_mode: "html",
+      disable_web_page_preview: true,
     })
   }).catch(e => logError(e));
-}
-
-function logError(e) {
-  console.error("ERROR: " + e.toString());
 }
 
 function replyTo(chatId, text) {
@@ -141,7 +142,7 @@ let watchList = [
 
 function onExiting(cmdChatId) {
   replyTo(cmdChatId, `<i>Shutting down...</i>`)
-  notify("<i>Shutting down...<i>")
+  notify("<i>Shutting down...</i>")
 
   let backupMessage = "Backup code:\n<pre>"
   backupMessage += watchList.map(e => `/add ${e.name} ${e.threshold}`).join('\n')
@@ -151,14 +152,14 @@ function onExiting(cmdChatId) {
 
 // Start
 function main() {
-  notify("<i>Starting server...<i>")
+  notify("<i>Starting server...</i>")
 
   watchList = watchList.map(e => ({
     ...e,
     stopper: monitor(e.name, e.threshold)
   }));
 
-  notify("<b>Server started!<b>")
+  notify("<b>Server started!</b>")
 
   // Declare a route
   fastify.post('/', async function (request, reply) {
