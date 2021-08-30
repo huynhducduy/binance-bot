@@ -1,8 +1,12 @@
 {
   "name": "binance-bot",
   "version": "1.0.0",
-  "description": "",
+  "description": "Binance monitor bot",
   "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/huynhducduy/binance-bot.git"
+  },
   "scripts": {
     "start": "run-p start:*",
     "start:watcher": "node watcher.js",

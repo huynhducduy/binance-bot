@@ -4,6 +4,7 @@ const fastify = require('fastify')({
 })
 const { spawn } = require( 'child_process' );
 require('dotenv').config()
+process.send = process.send || function () {};
 
 const telegramBotKey = process.env.TELEGRAM_PC_BOT_KEY;
 const channelChatId = process.env.TELEGRAM_PC_CHAT_ID;
