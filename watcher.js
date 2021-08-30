@@ -2,6 +2,7 @@ const WebSocket = require('ws')
 const fetch = require('node-fetch');
 const fastify = require('fastify')({
 })
+const { spawn } = require( 'child_process' );
 require('dotenv').config()
 
 const telegramBotKey = process.env.TELEGRAM_PC_BOT_KEY;
@@ -147,7 +148,7 @@ function main() {
 
   // Declare a route
   fastify.post('/', async function (request, reply) {
-    if (request.body?.message?.text?.startsWith('/add ')) {
+    if (request.body?.message?.text?.startsWith('/add')) {
       const [, name, threshold] = request.body.message.text.split(' ')
       if (!threshold || threshold <= 0) {
         replyTo(request.body.message.chat.id, `Threshold must be positive`)
@@ -170,7 +171,7 @@ function main() {
         watchList.push({ name, threshold: parseFloat(threshold), stopper: monitor(name, parseFloat(threshold)) });
         replyTo(request.body.message.chat.id, `${name} is now being monitored at a threshold of ${threshold}`)
       }
-    } else if (request.body?.message?.text?.startsWith('/remove ')) {
+    } else if (request.body?.message?.text?.startsWith('/remove')) {
       const [, name] = request.body.message.text.split(' ')
 
       const foundAt = watchList.findIndex(e => e.name === name)
@@ -185,6 +186,8 @@ function main() {
     } else if (request.body?.message?.text?.startsWith('/list')) {
       const msg = watchList.map(e => `${e.name} is being monitored at a threshold of ${e.threshold}`).join('\n')
       replyTo(request.body.message.chat.id, msg);
+    }  else if (request.body?.message?.text?.startsWith('/deploy')) {
+      spawn( 'sh', ['/root/duy/binance-bot/duy.sh'] )
     }
     reply.send()
   })
