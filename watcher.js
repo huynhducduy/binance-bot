@@ -140,9 +140,9 @@ let watchList = [
   { name: 'BTC', threshold: 3 },
 ]
 
-function onExiting(cmdChatId) {
-  replyTo(cmdChatId, `<i>Shutting down...</i>`)
+function async onExiting(cmdChatId) {
   notify("<i>Shutting down...</i>")
+  await replyTo(cmdChatId, `<i>Shutting down...</i>`)
 
   let backupMessage = "Backup code:\n<pre>"
   backupMessage += watchList.map(e => `/add ${e.name} ${e.threshold}`).join('\n')
@@ -151,15 +151,15 @@ function onExiting(cmdChatId) {
 }
 
 // Start
-function main() {
-  notify("<i>Starting server...</i>")
+function async main() {
+  await notify("<i>Starting server...</i>")
 
   watchList = watchList.map(e => ({
     ...e,
     stopper: monitor(e.name, e.threshold)
   }));
 
-  notify("<b>Server started!</b>")
+  await notify("<b>Server started!</b>")
 
   // Declare a route
   fastify.post('/', async function (request, reply) {
@@ -222,7 +222,7 @@ function main() {
 main()
 
 process.on('SIGINT', function() {
-  notify("<b>Server is stopped!<b>").finally(function() {
+  notify("<b>Server is stopped!</b>").finally(function() {
     process.exit(2)
   })
 })
