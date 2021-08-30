@@ -187,7 +187,18 @@ function main() {
       const msg = watchList.map(e => `${e.name} is being monitored at a threshold of ${e.threshold}`).join('\n')
       replyTo(request.body.message.chat.id, msg);
     }  else if (request.body?.message?.text?.startsWith('/deploy')) {
-      spawn( 'sh', ['/root/duy/binance-bot/duy.sh'] )
+      const deploy = spawn( 'sh', ['/root/duy/binance-bot/duy.sh'] )
+      deploy.stdout.on('data', (data) => {
+        replyTo(request.body.message.chat.id, `Deploy message: ${data.toString()}`)
+      });
+
+      deploy.stderr.on('data', (data) => {
+        replyTo(request.body.message.chat.id, `Deploy error: ${data.toString()}`)
+      });
+
+      deploy.on( 'close', () => {
+        replyTo(request.body.message.chat.id, `<b>Successfully deployed!</b>`)
+      });
     }
     reply.send()
   })
