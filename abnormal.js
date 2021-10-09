@@ -151,7 +151,7 @@ async function monitorAbnormalTradingNotices() {
         }
 
         message += ` (${changeInPercentage} in ${periodStr}).`
-        noti = true;
+        noti = false;
 
       } else if (['UP_BREAKTHROUGH', 'DOWN_BREAKTHROUGH'].includes(data.eventType)) {
 
