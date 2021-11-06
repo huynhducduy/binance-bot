@@ -12,6 +12,7 @@
     "start:watcher": "node watcher.js",
     "start:abnormal": "node abnormal.js",
     "start:new-listing": "node newListing.js",
+    "start:nft": "node nft.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
