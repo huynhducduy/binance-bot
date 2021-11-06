@@ -1,0 +1,4 @@
+[
+  { "name": "ETH", "threshold": 1 },
+  { "name": "BTC", "threshold": 0.5 }
+]
