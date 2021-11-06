@@ -98,7 +98,7 @@ async function main() {
   // Declare a route
   fastify.post('/', async function (request, reply) {
     if (request.body?.message?.text?.startsWith('/add')) {
-      const [, name] = request.body.message.text.split(' ')
+      const name = request.body.message.text.substring(5)
       const foundAt = watchList.findIndex(e => e === name)
 
       if (foundAt !== -1) {
