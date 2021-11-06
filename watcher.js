@@ -1,7 +1,12 @@
 const fs = require('fs');
 const WebSocket = require('ws')
 const fetch = require('node-fetch');
+const path = require('path');
 const fastify = require('fastify')({
+  https: {
+    key: fs.readFileSync(path.join(__dirname, '..', 'secure', 'key.pem')),
+    cert: fs.readFileSync(path.join(__dirname, '..', 'secure', 'cert.pem'))
+  }
 })
 const { spawn } = require( 'child_process' );
 require('dotenv').config()
@@ -196,13 +201,13 @@ async function main() {
       replyTo(request.body.message.chat.id, msg);
     }  else if (request.body?.message?.text?.startsWith('/restart')) {
       onExiting(request.body.message.chat.id);
-      spawn( 'sh', ['/root/duy/binance-bot/duy.sh'] );
+      spawn( 'sh', ['./restart.sh'] );
     }
     reply.send()
   })
 
   // Run the server!
-  fastify.listen(process.env.PC_WEBHOOK_PORT || 3000, function (err, address) {
+  fastify.listen(process.env.PC_WEBHOOK_PORT || 3000, '0.0.0.0', function (err, address) {
     if (err) {
       fastify.log.error(err)
       process.exit(1)
