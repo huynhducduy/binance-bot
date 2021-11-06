@@ -108,7 +108,7 @@ async function main() {
         replyTo(request.body.message.chat.id, `${name} is now being monitored`)
       }
     } else if (request.body?.message?.text?.startsWith('/remove')) {
-      const name = request.body.message.text.substring(5)
+      const name = request.body.message.text.substring(8)
 
       const foundAt = watchList.findIndex(e => e.name === name)
 
