@@ -107,7 +107,7 @@ function monitor({name, source, category, keyword} ) {
             if (price != newPrice) {
               const percentage = newPrice/price * 100
               if (percentage <= 70) {
-                notifyAbnormal(`<b>${name}</b> is down <b>${(100-percentage).toFixed(1)}%</b>, from ${price} to <b>${newPrice}</b> RACA. <a href='https://www.binance.com/en/nft/goods/blindBox/detail?productId=${res.data.data[0].productId}&isProduct=1'>Get it now</a>`)
+                notifyAbnormal(`<b>${name}</b> is down <b>${(100-percentage).toFixed(1)}%</b>, from ${price} to <b>${newPrice}</b> RACA. <a href='https://market.radiocaca.com/#/market-place/${res.list[0].id}'>Get it now</a>`)
               }
               price = newPrice
               notify(`<b>${name}</b> is now worth <b><a href='https://market.radiocaca.com/#/market-place/${res.list[0].id}'>${(price).toFixed(0)}RACA</a></b>`)
