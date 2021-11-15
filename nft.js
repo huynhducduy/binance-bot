@@ -2,10 +2,10 @@ const fs = require('fs');
 const fetch = require('node-fetch');
 const path = require('path');
 const fastify = require('fastify')({
-  // https: {
-  //   key: fs.readFileSync(path.join(__dirname, '..', 'secure', 'key.pem')),
-  //   cert: fs.readFileSync(path.join(__dirname, '..', 'secure', 'cert.pem'))
-  // }
+  https: {
+    key: fs.readFileSync(path.join(__dirname, '..', 'secure', 'key.pem')),
+    cert: fs.readFileSync(path.join(__dirname, '..', 'secure', 'cert.pem'))
+  }
 })
 const { spawn } = require( 'child_process' );
 require('dotenv').config()
