@@ -13,6 +13,7 @@ process.send = process.send || function () {};
 
 const telegramBotKey = process.env.TELEGRAM_NFTPC_BOT_KEY;
 const channelChatId = process.env.TELEGRAM_NFTPC_CHAT_ID;
+const abnormalChannelId = process.env.TELEGRAM_NFTPC_ABNORMAL_CHAT_ID;
 
 const uri = `https://api.telegram.org/bot${telegramBotKey}`;
 
@@ -35,6 +36,21 @@ function notify(text) {
   }).catch(e => logError(e));
 }
 
+function notifyAbnormal(text) {
+  return fetch(`${uri}/sendMessage`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      chat_id: abnormalChannelId,
+      text: text,
+      parse_mode: "html",
+      disable_web_page_preview: true,
+    })
+  }).catch(e => logError(e));
+}
+
 function replyTo(chatId, text) {
   return fetch(`${uri}/sendMessage`, {
     method: 'POST',
@@ -50,22 +66,10 @@ function replyTo(chatId, text) {
   }).catch(e => logError(e));
 }
 
-function convertSource(sourceNum) {
-  switch (sourceNum) {
-    case 0:
-      return "Binance Mystery Boxes"
-    case 1:
-      return "Binance Marketplace"
-    case 2:
-      return "Raca Marketplace"
-    case 3:
-      return "Opensea"
-  }
-}
-
 function monitor({name, source, category, keyword} ) {
 
   let price = 0.0
+  let unit = ""
 
   let intervalId;
 
@@ -82,7 +86,14 @@ function monitor({name, source, category, keyword} ) {
           }).then(res => res.json()).then(res => {
             const newPrice = res.data.data[0].amount/res.data.data[0].batchNum
             if (price != newPrice) {
+              if (unit === res.data.data[0].currency) {
+                const percentage = newPrice/price * 100
+                if (percentage <= 70) {
+                  notifyAbnormal(`<b>${name}</b> is down <b>${(100-percentage).toFixed(1)}%</b>, from ${price.toFixed(2)} to <b>${newPrice.toFixed(2)} ${unit}</b>. <a href='https://www.binance.com/en/nft/goods/blindBox/detail?productId=${res.data.data[0].productId}&isProduct=1'>Get it now</a>`)
+                }
+              }
               price = newPrice
+              unit = res.data.data[0].currency
               notify(`<b>${name}</b> is now worth <b><a href='https://www.binance.com/en/nft/goods/blindBox/detail?productId=${res.data.data[0].productId}&isProduct=1'>${(price).toFixed(2)}${res.data.data[0].currency}</a></b>`)
             }
           })
@@ -94,6 +105,10 @@ function monitor({name, source, category, keyword} ) {
           .then(res => res.json()).then(res => {
             const newPrice = res.list[0].fixed_price/res.list[0].count
             if (price != newPrice) {
+              const percentage = newPrice/price * 100
+              if (percentage <= 70) {
+                notifyAbnormal(`<b>${name}</b> is down <b>${(100-percentage).toFixed(1)}%</b>, from ${price} to <b>${newPrice}</b> RACA. <a href='https://www.binance.com/en/nft/goods/blindBox/detail?productId=${res.data.data[0].productId}&isProduct=1'>Get it now</a>`)
+              }
               price = newPrice
               notify(`<b>${name}</b> is now worth <b><a href='https://market.radiocaca.com/#/market-place/${res.list[0].id}'>${(price).toFixed(0)}RACA</a></b>`)
             }
