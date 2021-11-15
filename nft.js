@@ -60,8 +60,6 @@ function convertSource(sourceNum) {
       return "Raca Marketplace"
     case 3:
       return "Opensea"
-    default:
-      throw new Error("Unknown source: " + sourceNum);
   }
 }
 
@@ -128,7 +126,7 @@ async function main() {
   fastify.post('/', async function (request, reply) {
     const message = request.body?.message;
     if (message) {
-        const regex = /\/(?<command>add|remove)\s(?<source>\d+)\s?(?<category>\d*)\s?"(?<keyword>.*)"\s<(?<name>.*)>/gm;
+        const regex = /\/(?<command>add)\s(?<source>\d+)\s?(?<category>\d*)\s?"(?<keyword>.*)"\s<(?<name>.*)>/gm;
 
         if (regex.test(message.text)) {
           regex.lastIndex = 0
@@ -141,30 +139,30 @@ async function main() {
 
               const name = m.groups.name;
               const keyword = m.groups.keyword;
-              const source = m.groups.source;
+              const source = parseInt(m.groups.source);
               const category = m.groups.category;
-              const command = m.groups.command;
 
               const foundAt = watchList.findIndex(e => e.name === name)
               if (foundAt !== -1) {
-                  if (command === "add") {
-                    replyTo(message.chat.id, `${name} is already being monitored`)
-                  } else if (command === "remove") {
-                    clearInterval(watchList[foundAt].intervalId)
-                    watchList.splice(foundAt, 1)
-                    replyTo(message.chat.id, `${name} is no longer being monitored`)
-                  }
+                replyTo(message.chat.id, `${name} is already being monitored`)
               } else {
-                if (command === "add") {
-                  watchList.push({ name, source, category, keyword, intervalId: monitor({name, source, category, keyword}) });
-                  replyTo(message.chat.id, `${name} is now being monitored`)
-                } else if (command === "remove") {
-                  replyTo(message.chat.id, `${name} is not being monitored`)
-                }
+                watchList.push({ name, source, category, keyword, intervalId: monitor({name, source, category, keyword}) });
+                replyTo(message.chat.id, `${name} is now being monitored`)
               }
           }
+        } else if (message.text?.startsWith('/remove')) {
+          const name = message.text.substring(8);
+          const foundAt = watchList.findIndex(e => e.name === name)
+
+          if (foundAt !== -1) {
+              clearInterval(watchList[foundAt].intervalId)
+              watchList.splice(foundAt, 1)
+              replyTo(message.chat.id, `${name} is no longer being monitored`)
+            } else {
+              replyTo(message.chat.id, `${name} is not being monitored`)
+            }
         } else if (message.text?.startsWith('/list')) {
-          const msg = watchList.map(e => `${e.name} on ${convertSource(e.source)}`).join('\n')
+          const msg = watchList.map(e => `${e.name} with source: ${e.source}, category: ${e.category}, keyword: ${e.keyword}`).join('\n')
           replyTo(message.chat.id, msg);
         }  else if (message.text?.startsWith('/restart')) {
           onExiting(message.chat.id);
