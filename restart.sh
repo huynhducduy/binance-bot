@@ -1,3 +1,4 @@
+git reset --hard
 git pull
 npm ci
 pm2 restart nft

@@ -2,10 +2,10 @@ const fs = require('fs');
 const fetch = require('node-fetch');
 const path = require('path');
 const fastify = require('fastify')({
-  https: {
-    key: fs.readFileSync(path.join(__dirname, '..', 'secure', 'key.pem')),
-    cert: fs.readFileSync(path.join(__dirname, '..', 'secure', 'cert.pem'))
-  }
+  // https: {
+  //   key: fs.readFileSync(path.join(__dirname, '..', 'secure', 'key.pem')),
+  //   cert: fs.readFileSync(path.join(__dirname, '..', 'secure', 'cert.pem'))
+  // }
 })
 const { spawn } = require( 'child_process' );
 require('dotenv').config()
@@ -131,6 +131,7 @@ async function main() {
         const regex = /\/(?<command>add|remove)\s(?<source>\d+)\s?(?<category>\d*)\s?"(?<keyword>.*)"\s<(?<name>.*)>/gm;
 
         if (regex.test(message.text)) {
+          regex.lastIndex = 0
           let m;
 
           while ((m = regex.exec(message.text)) !== null) {
