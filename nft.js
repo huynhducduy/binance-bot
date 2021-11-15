@@ -50,28 +50,58 @@ function replyTo(chatId, text) {
   }).catch(e => logError(e));
 }
 
-function monitor(e ) {
-  console.log(`Started monitoring ${e}`)
+function convertSource(sourceNum) {
+  switch (sourceNum) {
+    case 0:
+      return "Binance Mystery Boxes"
+    case 1:
+      return "Binance Marketplace"
+    case 2:
+      return "Raca Marketplace"
+    case 3:
+      return "Opensea"
+    default:
+      throw new Error("Unknown source: " + sourceNum);
+  }
+}
+
+function monitor({name, source, category, keyword} ) {
 
   let price = 0.0
 
-  const intervalId = setInterval(() => {
-    fetch("https://www.binance.com/bapi/nft/v1/public/nft/market-mystery/mystery-list", {
-      "headers": {
-        "cache-control": "no-cache",
-        "content-type": "application/json",
-      },
-      "body": "{\"page\":1,\"size\":1,\"params\":{\"keyword\":\""+ e +"\",\"nftType\":null,\"orderBy\":\"amount_sort\",\"orderType\":\"1\",\"serialNo\":null,\"tradeType\":0}}",
-      "method": "POST"
-    }).then(res => res.json()).then(res => {
-      const newPrice = res.data.data[0].amount/res.data.data[0].batchNum
-      if (price != newPrice) {
-        price = newPrice
-        notify(`${e} is now worth ${(price).toFixed(0)}${res.data.data[0].currency}`)
-      }
-    })
-  }, 5000)
+  let intervalId;
 
+  switch (source) {
+    case 0:
+        intervalId = setInterval(() => {
+          fetch("https://www.binance.com/bapi/nft/v1/public/nft/market-mystery/mystery-list", {
+            "headers": {
+              "cache-control": "no-cache",
+              "content-type": "application/json",
+            },
+            "body": "{\"page\":1,\"size\":1,\"params\":{\"keyword\":\""+ keyword +"\",\"nftType\":null,\"orderBy\":\"amount_sort\",\"orderType\":1,\"serialNo\":"+ (category ? `["${category}"]` : "null")  +",\"tradeType\":0}}",
+            "method": "POST"
+          }).then(res => res.json()).then(res => {
+            const newPrice = res.data.data[0].amount/res.data.data[0].batchNum
+            if (price != newPrice) {
+              price = newPrice
+              notify(`<b>${name}</b> is now worth <b><a href='https://www.binance.com/en/nft/goods/blindBox/detail?productId=${res.data.data[0].productId}&isProduct=1'>${(price).toFixed(2)}${res.data.data[0].currency}</a></b>`)
+            }
+          })
+        }, 1000)
+      break;
+    case 2:
+        intervalId = setInterval(() => {
+          fetch(`https://market-api.radiocaca.com/nft-sales?pageNo=1&pageSize=1&sortBy=fixed_price&name=${keyword}&order=asc&saleType&category=${category}&tokenType`)
+          .then(res => res.json()).then(res => {
+            const newPrice = res.list[0].fixed_price/res.list[0].count
+            if (price != newPrice) {
+              price = newPrice
+              notify(`<b>${name}</b> is now worth <b><a href='https://market.radiocaca.com/#/market-place/${res.list[0].id}'>${(price).toFixed(0)}RACA</a></b>`)
+            }
+          })
+        }, 1000)
+  }
 
   return intervalId
 }
@@ -89,42 +119,56 @@ async function main() {
   await notify("<i>Starting server...</i>")
 
   watchList = watchList.map(e => ({
-    name: e,
+    ...e,
     intervalId: monitor(e)
   }));
 
   await notify("<b>Server started!</b>")
 
-  // Declare a route
   fastify.post('/', async function (request, reply) {
-    if (request.body?.message?.text?.startsWith('/add')) {
-      const name = request.body.message.text.substring(5)
-      const foundAt = watchList.findIndex(e => e === name)
+    const message = request.body?.message;
+    if (message) {
+        const regex = /\/(?<command>add|remove)\s(?<source>\d+)\s?(?<category>\d*)\s?"(?<keyword>.*)"\s<(?<name>.*)>/gm;
 
-      if (foundAt !== -1) {
-          replyTo(request.body.message.chat.id, `${name} is already being monitored`)
-      } else {
-        watchList.push({ name, intervalId: monitor(name) });
-        replyTo(request.body.message.chat.id, `${name} is now being monitored`)
-      }
-    } else if (request.body?.message?.text?.startsWith('/remove')) {
-      const name = request.body.message.text.substring(8)
+        if (regex.test(message.text)) {
+          let m;
 
-      const foundAt = watchList.findIndex(e => e.name === name)
+          while ((m = regex.exec(message.text)) !== null) {
+              if (m.index === regex.lastIndex) {
+                  regex.lastIndex++;
+              }
 
-      if (foundAt !== -1) {
-        clearInterval(watchList[foundAt].intervalId)
-        watchList.splice(foundAt, 1)
-        replyTo(request.body.message.chat.id, `${name} is no longer being monitored`)
-      } else {
-        replyTo(request.body.message.chat.id, `${name} is not being monitored`)
-      }
-    } else if (request.body?.message?.text?.startsWith('/list')) {
-      const msg = watchList.map(e => `${e.name}`).join('\n')
-      replyTo(request.body.message.chat.id, msg);
-    }  else if (request.body?.message?.text?.startsWith('/restart')) {
-      onExiting(request.body.message.chat.id);
-      spawn( 'sh', ['./restart.sh'] );
+              const name = m.groups.name;
+              const keyword = m.groups.keyword;
+              const source = m.groups.source;
+              const category = m.groups.category;
+              const command = m.groups.command;
+
+              const foundAt = watchList.findIndex(e => e.name === name)
+              if (foundAt !== -1) {
+                  if (command === "add") {
+                    replyTo(message.chat.id, `${name} is already being monitored`)
+                  } else if (command === "remove") {
+                    clearInterval(watchList[foundAt].intervalId)
+                    watchList.splice(foundAt, 1)
+                    replyTo(message.chat.id, `${name} is no longer being monitored`)
+                  }
+              } else {
+                if (command === "add") {
+                  watchList.push({ name, source, category, keyword, intervalId: monitor({name, source, category, keyword}) });
+                  replyTo(message.chat.id, `${name} is now being monitored`)
+                } else if (command === "remove") {
+                  replyTo(message.chat.id, `${name} is not being monitored`)
+                }
+              }
+          }
+        } else if (message.text?.startsWith('/list')) {
+          const msg = watchList.map(e => `${e.name} on ${convertSource(e.source)}`).join('\n')
+          replyTo(message.chat.id, msg);
+        }  else if (message.text?.startsWith('/restart')) {
+          onExiting(message.chat.id);
+          spawn( 'sh', ['./restart.sh'] );
+        }
     }
     reply.send()
   })
@@ -147,7 +191,7 @@ let cleanedUp = false;
 process.on('SIGINT', function() {
   if (!cleanedUp) {
     cleanedUp = true;
-    fs.writeFileSync('./data/nft.json', JSON.stringify(watchList.map(e => e.name)));
+    fs.writeFileSync('./data/nft.json', JSON.stringify(watchList.map(e => ({...e, intervalId: undefined}))));
     notify("<b>Server is stopped!</b>").finally(function() {
       process.exit(0)
     })
