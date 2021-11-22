@@ -97,7 +97,7 @@ function monitor({name, source, category, keyword} ) {
               notify(`<b>${name}</b> is now worth <b><a href='https://www.binance.com/en/nft/goods/blindBox/detail?productId=${res.data.data[0].productId}&isProduct=1'>${(price).toFixed(2)}${res.data.data[0].currency}</a></b>`)
             }
           })
-        }, 5000)
+        }, 1000)
       break;
     case 2:
         intervalId = setInterval(() => {
@@ -113,7 +113,7 @@ function monitor({name, source, category, keyword} ) {
               notify(`<b>${name}</b> is now worth <b><a href='https://market.radiocaca.com/#/market-place/${res.list[0].id}'>${(price).toFixed(0)}RACA</a></b>`)
             }
           })
-        }, 5000)
+        }, 10000)
   }
 
   return intervalId
