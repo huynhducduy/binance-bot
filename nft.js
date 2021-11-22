@@ -101,7 +101,7 @@ function monitor({name, source, category, keyword} ) {
       break;
     case 2:
         intervalId = setInterval(() => {
-          fetch(`https://market-api.radiocaca.com/nft-sales?pageNo=1&pageSize=1&sortBy=fixed_price&name=${keyword}&order=asc&saleType&category=${category}&tokenType`)
+          fetch(`https://market-api.radiocaca.com/nft-sales?pageNo=1&pageSize=1&sortBy=single_price&name=${keyword}&order=asc&saleType&category=${category}&tokenType`)
           .then(res => res.json()).then(res => {
             const newPrice = res.list[0].fixed_price/res.list[0].count
             if (price != newPrice) {
