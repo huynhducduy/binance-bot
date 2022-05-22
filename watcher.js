@@ -61,7 +61,12 @@ function monitor(e = 'BTC', threshold = 1) {
 
   let socket = null
 
-  const connectStr = `${e.toLowerCase()}usdt@aggTrade`
+  let connectStr = e.toLowerCase()
+  if (connectStr.includes('busd')) {
+    connectStr += `@aggTrade`
+  } else {
+    connectStr += `usdt@aggTrade`
+  }
   function connect() {
     socket = new WebSocket('wss://stream.binance.com:9443/stream?streams=' + connectStr)
 
