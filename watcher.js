@@ -18,7 +18,7 @@ const channelChatId = process.env.TELEGRAM_PC_CHAT_ID;
 const uri = `https://api.telegram.org/bot${telegramBotKey}`;
 
 function logError(e) {
-  console.error("ERROR: " + e.toString());
+  console.error(`ERROR: ${e.toString()}`);
 }
 
 function notify(text) {
@@ -63,12 +63,12 @@ function monitor(e = 'BTC', threshold = 1) {
 
   let connectStr = e.toLowerCase()
   if (connectStr.includes('busd')) {
-    connectStr += `@aggTrade`
+    connectStr += "@aggTrade"
   } else {
-    connectStr += `usdt@aggTrade`
+    connectStr += "usdt@aggTrade"
   }
   function connect() {
-    socket = new WebSocket('wss://stream.binance.com:9443/stream?streams=' + connectStr)
+    socket = new WebSocket(`wss://stream.binance.com:9443/stream?streams=${connectStr}`)
 
     socket.on('message', raw => {
       const data = JSON.parse(raw).data
@@ -150,7 +150,7 @@ let watchList = JSON.parse(fs.readFileSync('./data/watcher.json'))
 
 async function onExiting(cmdChatId) {
   notify("<i>Shutting down...</i>")
-  await replyTo(cmdChatId, `<i>Shutting down...</i>`)
+  await replyTo(cmdChatId, "<i>Shutting down...</i>")
 }
 
 // Start
@@ -169,7 +169,7 @@ async function main() {
     if (request.body?.message?.text?.startsWith('/add')) {
       const [, name, threshold] = request.body.message.text.split(' ')
       if (!threshold || threshold <= 0) {
-        replyTo(request.body.message.chat.id, `Threshold must be positive`)
+        replyTo(request.body.message.chat.id, "Threshold must be positive")
         reply.send()
         return;
       }

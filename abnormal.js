@@ -11,7 +11,7 @@ const uri = `https://api.telegram.org/bot${telegramBotKey}`;
 //----------------------------------------------------------------------------------------------------------------------
 
 function logError(e) {
-  console.error("ERROR: " + e.toString());
+  console.error(`ERROR: ${e.toString()}`);
 }
 
 function notify(text) {
@@ -102,10 +102,10 @@ async function monitorAbnormalTradingNotices() {
     const data = JSON.parse(raw).data;
     data.baseAsset = data.baseAsset.toUpperCase()
 
-    if (data.baseAsset.endsWith('UP') || data.baseAsset.endsWith('DOWN')) return;
-    if (data.quotaAsset !== "USDT") return;
+    if (data.baseAsset.endsWith('UP') || data.baseAsset.endsWith('DOWN')) { return; }
+    if (data.quotaAsset !== "USDT") { return; }
 
-    const changeInPercentage = (data.priceChange > 0 ? "+" : "") + (data.priceChange * 100).toFixed(2) + "%";
+    const changeInPercentage = `${(data.priceChange > 0 ? "+" : "")}${(data.priceChange * 100).toFixed(2)}%`;
 
     const periodStr = getPeriodString(data.period);
 
@@ -128,14 +128,14 @@ async function monitorAbnormalTradingNotices() {
           }
         }
 
-        message += ` INCREASED`;
+        message += " INCREASED";
       } else if (data.eventType === "DOWN_1") {
         if (data.period === "MINUTE_5") {
           pumpCheck[data.baseAsset] -= 1;
         } else if (data.period === "HOUR_2") {
           pumpCheck[data.baseAsset] -= 2;
         }
-        message += ` DECREASED`;
+        message += " DECREASED";
       }
 
       message += ` ${changeInPercentage} within ${periodStr}.`;
@@ -144,14 +144,13 @@ async function monitorAbnormalTradingNotices() {
 
       if (['RISE_AGAIN','DROP_BACK'].includes(data.eventType)) {
         if (data.eventType === 'RISE_AGAIN') {
-          message += ` is rising again`
+          message += " is rising again"
         } else if (data.eventType === 'DROP_BACK') {
-          message += ` is dropping back`
+          message += " is dropping back"
           pumpCheck[data.baseAsset] = 0;
         }
 
         message += ` (${changeInPercentage} in ${periodStr}).`
-        noti = false;
 
       } else if (['UP_BREAKTHROUGH', 'DOWN_BREAKTHROUGH'].includes(data.eventType)) {
 

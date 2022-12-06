@@ -18,7 +18,7 @@ const abnormalChannelId = process.env.TELEGRAM_NFTPC_ABNORMAL_CHAT_ID;
 const uri = `https://api.telegram.org/bot${telegramBotKey}`;
 
 function logError(e) {
-  console.error("ERROR: " + e.toString());
+  console.error(`ERROR: ${e.toString()}`);
 }
 
 function notify(text) {
@@ -74,18 +74,18 @@ function monitor({name, source, category, keyword} ) {
   let intervalId;
 
   switch (source) {
-    case 0:
+    case 0: {
         intervalId = setInterval(() => {
           fetch("https://www.binance.com/bapi/nft/v1/public/nft/market-mystery/mystery-list", {
             "headers": {
               "cache-control": "no-cache",
               "content-type": "application/json",
             },
-            "body": "{\"page\":1,\"size\":1,\"params\":{\"keyword\":\""+ keyword +"\",\"nftType\":null,\"orderBy\":\"amount_sort\",\"orderType\":1,\"serialNo\":"+ (category ? `["${category}"]` : "null")  +",\"tradeType\":0}}",
+            "body": `{"page":1,"size":1,"params":{"keyword":"${keyword}","nftType":null,"orderBy":"amount_sort","orderType":1,"serialNo":${category ? `["${category}"]` : "null"},"tradeType":0}}`,
             "method": "POST"
           }).then(res => res.json()).then(res => {
             const newPrice = res.data.data[0].amount/res.data.data[0].batchNum
-            if (price != newPrice) {
+            if (price !== newPrice) {
               if (unit === res.data.data[0].currency) {
                 const percentage = newPrice/price * 100
                 if (percentage <= 70) {
@@ -99,12 +99,13 @@ function monitor({name, source, category, keyword} ) {
           })
         }, 1000)
       break;
+    }
     case 2:
         intervalId = setInterval(() => {
           fetch(`https://market-api.radiocaca.com/nft-sales?pageNo=1&pageSize=1&sortBy=single_price&name=${keyword}&order=asc&saleType&category=${category}&tokenType`)
           .then(res => res.json()).then(res => {
             const newPrice = res.list[0].fixed_price/res.list[0].count
-            if (price != newPrice) {
+            if (price !== newPrice) {
               const percentage = newPrice/price * 100
               if (percentage <= 70) {
                 notifyAbnormal(`<b>${name}</b> is down <b>${(100-percentage).toFixed(1)}%</b>, from ${price} to <b>${newPrice}</b> RACA. <a href='https://market.radiocaca.com/#/market-place/${res.list[0].id}'>Get it now</a>`)
@@ -124,7 +125,7 @@ let watchList = JSON.parse(fs.readFileSync('./data/nft.json'))
 
 async function onExiting(cmdChatId) {
   notify("<i>Shutting down...</i>")
-  await replyTo(cmdChatId, `<i>Shutting down...</i>`)
+  await replyTo(cmdChatId, "<i>Shutting down...</i>")
 }
 
 // Start
