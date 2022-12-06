@@ -3,11 +3,12 @@ process.send = process.send || function () {};
 
 const telegramBotKey = process.env.TELEGRAM_PC_BOT_KEY;
 const channelChatId = process.env.TELEGRAM_P2PPC_CHAT_ID;
+const threshold = 50;
 
 const uri = `https://api.telegram.org/bot${telegramBotKey}`;
 
 function logError(e) {
-  console.error("ERROR: " + e.toString());
+  console.error(`ERROR: ${e.toString()}`);
 }
 
 function notify(text) {
@@ -43,7 +44,7 @@ setInterval(() => {
                   "cache-control": "no-cache",
                   "content-type": "application/json",
               },
-              "body": "{\"page\":1,\"rows\":1,\"payTypes\":[\"BANK\"],\"asset\":\""+item.asset+"\",\"tradeType\":\"BUY\",\"fiat\":\"VND\",\"publisherType\":null}",
+              "body": `{"page":1,"rows":1,"payTypes":["BANK"],"asset":"${item.asset}","tradeType":"BUY","fiat":"VND","publisherType":null}`,
               "method": "POST"
           }).then(res => res.json()),
           fetch("https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search", {
@@ -51,13 +52,13 @@ setInterval(() => {
                   "cache-control": "no-cache",
                   "content-type": "application/json",
               },
-              "body": "{\"page\":1,\"rows\":1,\"payTypes\":[\"BANK\"],\"asset\":\""+item.asset+"\",\"tradeType\":\"SELL\",\"fiat\":\"VND\",\"publisherType\":null}",
+              "body": `{"page":1,"rows":1,"payTypes":["BANK"],"asset":"${item.asset}","tradeType":"SELL","fiat":"VND","publisherType":null}`,
               "method": "POST"
           }).then(res => res.json()),
       ])
       .then(([res1, res2]) => {
           const [buy, sell] = [res1.data[0].adv.price, res2.data[0].adv.price]
-          if (buy != item.lastPrice.buy || sell != item.lastPrice.sell) {
+          if (Math.abs(buy-item.lastPrice.buy) >= threshold || Math.abs(sell-item.lastPrice.sell) >= threshold) {
             notify(`BUY <b>${buy.toLocaleString("en-US")}</b>, SELL <b>${sell.toLocaleString("en-US")}</b>`)
             item.lastPrice = {
               buy: buy,
