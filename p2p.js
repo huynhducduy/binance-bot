@@ -36,35 +36,41 @@ const data = [{
   },
 }]
 
-setInterval(() => {
-  data.forEach(async (item) => {
-      Promise.all([
-          fetch("https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search", {
-              "headers": {
-                  "cache-control": "no-cache",
-                  "content-type": "application/json",
-              },
-              "body": `{"page":1,"rows":1,"payTypes":["BANK"],"asset":"${item.asset}","tradeType":"BUY","fiat":"VND","publisherType":null}`,
-              "method": "POST"
-          }).then(res => res.json()),
-          fetch("https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search", {
-              "headers": {
-                  "cache-control": "no-cache",
-                  "content-type": "application/json",
-              },
-              "body": `{"page":1,"rows":1,"payTypes":["BANK"],"asset":"${item.asset}","tradeType":"SELL","fiat":"VND","publisherType":null}`,
-              "method": "POST"
-          }).then(res => res.json()),
-      ])
-      .then(([res1, res2]) => {
-          const [buy, sell] = [res1.data[0].adv.price, res2.data[0].adv.price]
-          if (Math.abs(buy-item.lastPrice.buy) >= threshold || Math.abs(sell-item.lastPrice.sell) >= threshold) {
-            notify(`BUY <b>${buy.toLocaleString("en-US")}</b>, SELL <b>${sell.toLocaleString("en-US")}</b>`)
-            item.lastPrice = {
-              buy: buy,
-              sell: sell,
+function getBuySellPrice() {
+    data.forEach(async (item) => {
+        Promise.all([
+            fetch("https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search", {
+                "headers": {
+                    "cache-control": "no-cache",
+                    "content-type": "application/json",
+                },
+                "body": `{"page":1,"rows":1,"payTypes":["BANK"],"asset":"${item.asset}","tradeType":"BUY","tradeAmount":50000000,"fiat":"VND","publisherType":null}`,
+                "method": "POST"
+            }).then(res => res.json()),
+            fetch("https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search", {
+                "headers": {
+                    "cache-control": "no-cache",
+                    "content-type": "application/json",
+                },
+                "body": `{"page":1,"rows":1,"payTypes":["BANK"],"asset":"${item.asset}","tradeType":"SELL","tradeAmount":50000000,"fiat":"VND","publisherType":null}`,
+                "method": "POST"
+            }).then(res => res.json()),
+        ])
+        .then(([res1, res2]) => {
+            const [buy, sell] = [res1.data[0].adv.price, res2.data[0].adv.price]
+            if (Math.abs(buy-item.lastPrice.buy) >= threshold || Math.abs(sell-item.lastPrice.sell) >= threshold) {
+              notify(`BUY <b>${buy.toLocaleString("en-US")}</b>, SELL <b>${sell.toLocaleString("en-US")}</b>`)
+              item.lastPrice = {
+                buy: buy,
+                sell: sell,
+              }
             }
-          }
-      })
-  })
-}, 60 * 1000)
+        })
+    })
+}
+
+getBuySellPrice()
+
+setInterval(() => {
+  getBuySellPrice()
+}, 60 * 1000) // 1 minute
