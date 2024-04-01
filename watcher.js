@@ -245,10 +245,11 @@ async function main() {
     } else if (request.body?.message?.text?.startsWith('/list')) {
       const msg = watchList.map(e => `${e.name} is being monitored at a threshold of ${e.threshold}`).join('\n')
       replyTo(request.body.message.chat.id, msg);
-    }  else if (request.body?.message?.text?.startsWith('/restart')) {
-      onExiting(request.body.message.chat.id);
-      spawn( 'sh', ['./restart.sh'] );
     }
+    // else if (request.body?.message?.text?.startsWith('/restart')) {
+    //   onExiting(request.body.message.chat.id);
+    //   spawn( 'sh', ['./restart.sh'] );
+    // }
     reply.send()
   })
 
