@@ -1,13 +1,17 @@
 const fs = require('fs');
-const WebSocket = require('ws')
+const WebSocket = require('isomorphic-ws')
 const fetch = require('node-fetch');
 const path = require('path');
+const key = path.join(__dirname, '..', 'secure', 'key.pem')
+const cert = path.join(__dirname, '..', 'secure', 'cert.pem')
+
 const fastify = require('fastify')({
-  https: {
-    key: fs.readFileSync(path.join(__dirname, '..', 'secure', 'key.pem')),
-    cert: fs.readFileSync(path.join(__dirname, '..', 'secure', 'cert.pem'))
-  }
+  https: fs.existsSync(key) && fs.existsSync(cert) ? {
+    key: fs.readFileSync(key),
+    cert: fs.readFileSync(cert),
+  } : undefined
 })
+
 const { spawn } = require( 'child_process' );
 require('dotenv').config()
 process.send = process.send || function () {};
@@ -17,11 +21,14 @@ const channelChatId = process.env.TELEGRAM_PC_CHAT_ID;
 
 const uri = `https://api.telegram.org/bot${telegramBotKey}`;
 
-function logError(e) {
-  console.error(`ERROR: ${e.toString()}`);
+function logError(message, e) {
+  console.error(`ERROR: ${message}`, e);
 }
 
 function notify(text) {
+  // For local test
+  // console.log('NOTIFY:', text)
+  // return Promise.resolve()
   return fetch(`${uri}/sendMessage`, {
     method: 'POST',
     headers: {
@@ -33,7 +40,7 @@ function notify(text) {
       parse_mode: "html",
       disable_web_page_preview: true,
     })
-  }).catch(e => logError(e));
+  }).catch(e => logError('notify', e));
 }
 
 function replyTo(chatId, text) {
@@ -48,54 +55,80 @@ function replyTo(chatId, text) {
       parse_mode: "html",
       disable_web_page_preview: true,
     })
-  }).catch(e => logError(e));
+  }).catch(e => logError('reply', e));
+}
+
+let socket = null
+
+function connect() {
+  return new Promise((resolve) => {
+    socket = new WebSocket(`wss://stream.binance.com:9443/stream`)
+
+    socket.onopen = () => {
+      socket.onmessage = raw => {
+        try {
+          const message = JSON.parse(raw.data)
+          if (message) {
+            const streamName = message.stream
+            const data = message.data
+            processMessage(streamName, data)
+          }
+        } catch (e) {
+          logError('parse message', e)
+        }
+      }
+
+      socket.onerror = function(err) {
+        logError('socket', err);
+      }
+
+      socket.onclose = function (err) {
+        logError('close', err);
+      }
+
+      resolve()
+    }
+  })
+}
+
+let id = 1
+const price = {}
+const messsagesToSend = []
+
+function processMessage(streamName, data) {
+  price[streamName] = parseFloat(data.p)
 }
 
 function monitor(e = 'BTC', threshold = 1) {
   console.log(`Started monitoring ${e} at a threshold ${threshold}`)
+  id++
 
-  let price = 0.0
   const prices = []
   let diffs = 0.0
   let combo = 0
 
-  let socket = null
+  let streamName = e.toLowerCase() + "usdt@aggTrade"
 
-  let connectStr = e.toLowerCase()
-  if (connectStr.includes('busd')) {
-    connectStr += "@aggTrade"
-  } else {
-    connectStr += "usdt@aggTrade"
-  }
-  function connect() {
-    socket = new WebSocket(`wss://stream.binance.com:9443/stream?streams=${connectStr}`)
+  const thisId = id;
 
-    socket.on('message', raw => {
-      const data = JSON.parse(raw).data
-      price = parseFloat(data.p)
-    })
+  messsagesToSend.push({
+    id: id,
+    method: 'SUBSCRIBE',
+    params: [streamName]
+  })
 
-    socket.onerror = function(err) {
-      logError(err);
-    }
-
-    socket.onclose = function (err) {
-      logError(err);
-      setTimeout(() => connect(), 0)
-    }
-  }
-
-  connect()
-
+  // Add latest price to list of prices
   const watcher1 = setInterval(() => {
     if (prices.length > 10) {
-      prices.push(price)
+      prices.push(price[streamName])
       prices.shift()
     } else {
-      prices.push(price)
+      prices.push(price[streamName])
     }
+    console.log('PRICE(' + streamName +')', price[streamName])
   }, 1000)
 
+  // Calculate diff
   const watcher2 = setInterval(() => {
     if (prices.length < 10) {
       return
@@ -105,7 +138,7 @@ function monitor(e = 'BTC', threshold = 1) {
     diffs += diff
   }, 1000)
 
-  // Watcher
+  // Notify user
   const watcher3 = setInterval(() => {
     if (prices.length < 10) {
       return
@@ -135,11 +168,14 @@ function monitor(e = 'BTC', threshold = 1) {
   }, 1000)
 
   function stopWatchers() {
+    messsagesToSend.push({
+      id: thisId,
+      method: 'UNSUBSCRIBE',
+      params: [streamName]
+    })
     clearInterval(watcher1)
     clearInterval(watcher2)
     clearInterval(watcher3)
-    socket.onclose = null
-    socket.terminate()
   }
 
   return { stopWatchers }
@@ -156,13 +192,18 @@ async function onExiting(cmdChatId) {
 // Start
 async function main() {
   await notify("<i>Starting server...</i>")
+  await connect()
+  await notify("<b>Server started!</b>")
+
+  setInterval(() => {
+    const messsageToSend = messsagesToSend.shift()
+    if (messsageToSend) socket.send(JSON.stringify(messsageToSend))
+  }, 1000)
 
   watchList = watchList.map(e => ({
     ...e,
     stopper: monitor(e.name, e.threshold)
   }));
-
-  await notify("<b>Server started!</b>")
 
   // Declare a route
   fastify.post('/', async function (request, reply) {
@@ -214,6 +255,7 @@ async function main() {
   // Run the server!
   fastify.listen(process.env.PC_WEBHOOK_PORT || 3000, '0.0.0.0', function (err, address) {
     if (err) {
+      logError('????', err)
       fastify.log.error(err)
       process.exit(1)
     }

@@ -59,7 +59,7 @@ function getBuySellPrice() {
         .then(([res1, res2]) => {
             const [buy, sell] = [res1.data[0].adv.price, res2.data[0].adv.price]
             if (Math.abs(buy-item.lastPrice.buy) >= threshold || Math.abs(sell-item.lastPrice.sell) >= threshold) {
-              notify(`BUY <b>${buy.toLocaleString("en-US")}</b>, SELL <b>${sell.toLocaleString("en-US")}</b>`)
+              notify(`BUY <b>${buy.toLocaleString("en-US")}</b>, SELL <b>${sell.toLocaleString("en-US")}</b> at <b><a href='https://p2p.binance.com/trade/BANK/USDT?fiat=VND'>Binance</a></b>`)
               item.lastPrice = {
                 buy: buy,
                 sell: sell,
