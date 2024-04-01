@@ -44,7 +44,7 @@ function getBuySellPrice() {
                     "cache-control": "no-cache",
                     "content-type": "application/json",
                 },
-                "body": `{"page":1,"rows":1,"payTypes":["BANK"],"asset":"${item.asset}","tradeType":"BUY","tradeAmount":50000000,"fiat":"VND","publisherType":null}`,
+                "body": `{"page":1,"rows":1,"payTypes":["BANK"],"asset":"${item.asset}","tradeType":"BUY","transAmount":50000000,"fiat":"VND","publisherType":null}`,
                 "method": "POST"
             }).then(res => res.json()),
             fetch("https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search", {
@@ -52,7 +52,7 @@ function getBuySellPrice() {
                     "cache-control": "no-cache",
                     "content-type": "application/json",
                 },
-                "body": `{"page":1,"rows":1,"payTypes":["BANK"],"asset":"${item.asset}","tradeType":"SELL","tradeAmount":50000000,"fiat":"VND","publisherType":null}`,
+                "body": `{"page":1,"rows":1,"payTypes":["BANK"],"asset":"${item.asset}","tradeType":"SELL","transAmount":50000000,"fiat":"VND","publisherType":null}`,
                 "method": "POST"
             }).then(res => res.json()),
         ])
