@@ -145,11 +145,11 @@ function monitor(e = 'BTC', threshold = 1) {
     }
 
     // Big change
-    if (diffs > (threshold / 10) || diffs < -(threshold / 10)) {
+    if (diffs > (threshold / 100) || diffs < -(threshold / 100)) {
       // Send notify
       const positive = `+${threshold}%`
       const negative = `-${threshold}%`
-      const msg = `${e} has just modified ${diffs > 0 ? positive : negative}, current price is ${price}`
+      const msg = `${e} has just modified ${diffs > 0 ? positive : negative}, current price is ${price[streamName]}`
       combo += diffs > 0 ? 1 : -1
 
       notify(msg)
