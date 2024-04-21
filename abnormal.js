@@ -1,7 +1,3 @@
-const WebSocket = require('ws')
-const fetch = require('node-fetch');
-require('dotenv').config()
-
 const telegramBotKey = process.env.TELEGRAM_AT_BOT_KEY;
 const channelChatId = process.env.TELEGRAM_AT_CHAT_ID;
 const coinmarketcapMapUrl = 'https://api.coinmarketcap.com/data-api/v3/map/all?listing_status=active';
@@ -98,92 +94,102 @@ async function monitorAbnormalTradingNotices() {
 
   socket = new WebSocket('wss://bstream.binance.com:9443/stream?streams=abnormaltradingnotices');
 
-  socket.on('message', async raw => {
-    const data = JSON.parse(raw).data;
-    data.baseAsset = data.baseAsset.toUpperCase()
+  socket.onopen = () => {
+    socket.onmessage = raw => {
+      const data = JSON.parse(raw.data)?.data;
 
-    if (data.baseAsset.endsWith('UP') || data.baseAsset.endsWith('DOWN')) { return; }
-    if (data.quotaAsset !== "USDT") { return; }
+      if (!data || !data.baseAsset) return;
 
-    const changeInPercentage = `${(data.priceChange > 0 ? "+" : "")}${(data.priceChange * 100).toFixed(2)}%`;
+      if (data.baseAsset.endsWith('UP') || data.baseAsset.endsWith('DOWN')) { return; }
+      if (data.quotaAsset !== "USDT") { return; }
 
-    const periodStr = getPeriodString(data.period);
+      data.baseAsset = data.baseAsset?.toUpperCase()
 
-    let message = `<a href='${coinmarketcapMap[data.baseAsset]?.url || '#'}'>${data.baseAsset}</a> <i>(#${coinmarketcapMap[data.baseAsset]?.rank || '0'})</i>`;
-    let noti = false;
+      const changeInPercentage = `${(data.priceChange > 0 ? "+" : "")}${(data.priceChange * 100).toFixed(2)}%`;
 
-    if (['MINUTE_5', 'HOUR_2'].includes(data.period)) {
-      if (pumpCheck[data.baseAsset] === undefined || pumpCheck[data.baseAsset] <= 0) {
-        pumpCheck[data.baseAsset] = 0;
-      }
+      const periodStr = getPeriodString(data.period);
 
-      message += `'s price`;
+      let message = `<a href='${coinmarketcapMap[data.baseAsset]?.url || '#'}'>${data.baseAsset}</a> <i>(#${coinmarketcapMap[data.baseAsset]?.rank || '0'})</i>`;
+      let noti = false;
 
-      if (data.eventType === "UP_1") {
-        if (data.period === "MINUTE_5") {
-          pumpCheck[data.baseAsset] += 1;
-
-          if (pumpCheck[data.baseAsset] >= pumpThreshold) {
-            notify(`<b>${message} is being pumped!</b>`)
-          }
-        }
-
-        message += " INCREASED";
-      } else if (data.eventType === "DOWN_1") {
-        if (data.period === "MINUTE_5") {
-          pumpCheck[data.baseAsset] -= 1;
-        } else if (data.period === "HOUR_2") {
-          pumpCheck[data.baseAsset] -= 2;
-        }
-        message += " DECREASED";
-      }
-
-      message += ` ${changeInPercentage} within ${periodStr}.`;
-      noti = true;
-    } else {
-
-      if (['RISE_AGAIN','DROP_BACK'].includes(data.eventType)) {
-        if (data.eventType === 'RISE_AGAIN') {
-          message += " is rising again"
-        } else if (data.eventType === 'DROP_BACK') {
-          message += " is dropping back"
+      if (['MINUTE_5', 'HOUR_2'].includes(data.period)) {
+        if (pumpCheck[data.baseAsset] === undefined || pumpCheck[data.baseAsset] <= 0) {
           pumpCheck[data.baseAsset] = 0;
         }
 
-        message += ` (${changeInPercentage} in ${periodStr}).`
+        message += `'s price`;
 
-      } else if (['UP_BREAKTHROUGH', 'DOWN_BREAKTHROUGH'].includes(data.eventType)) {
+        if (data.eventType === "UP_1") {
+          if (data.period === "MINUTE_5") {
+            pumpCheck[data.baseAsset] += 1;
 
-        const stateStr = data.eventType === 'UP_BREAKTHROUGH' ? 'HIGH' : 'LOW';
+            if (pumpCheck[data.baseAsset] >= pumpThreshold) {
+              notify(`<b>${message} is being pumped!</b>`)
+            }
+          }
 
-        message += ` have a new ${periodStr} ${stateStr} (${changeInPercentage}).`;
-        noti = true
+          message += " INCREASED";
+        } else if (data.eventType === "DOWN_1") {
+          if (data.period === "MINUTE_5") {
+            pumpCheck[data.baseAsset] -= 1;
+          } else if (data.period === "HOUR_2") {
+            pumpCheck[data.baseAsset] -= 2;
+          }
+          message += " DECREASED";
+        }
+
+        message += ` ${changeInPercentage} within ${periodStr}.`;
+        noti = true;
+      } else {
+
+        if (['RISE_AGAIN','DROP_BACK'].includes(data.eventType)) {
+          if (data.eventType === 'RISE_AGAIN') {
+            message += " is rising again"
+          } else if (data.eventType === 'DROP_BACK') {
+            message += " is dropping back"
+            pumpCheck[data.baseAsset] = 0;
+          }
+
+          message += ` (${changeInPercentage} in ${periodStr}).`
+
+        } else if (['UP_BREAKTHROUGH', 'DOWN_BREAKTHROUGH'].includes(data.eventType)) {
+
+          const stateStr = data.eventType === 'UP_BREAKTHROUGH' ? 'HIGH' : 'LOW';
+
+          message += ` have a new ${periodStr} ${stateStr} (${changeInPercentage}).`;
+          noti = true
+        }
+      }
+
+      if (noti === true) {
+        (async function() {
+
+          let price = 0;
+
+          try {
+            price = await getPrice(data.symbol);
+            price = `<a href='https://www.binance.com/en/trade/${data.baseAsset}_USDT?layout=pro'>${price}</a>`;
+          } catch (err) {
+            price = "not available"
+            logError(err)
+          }
+
+          message += ` Current price is ${price}.`;
+          notify(message);
+        })();
       }
     }
 
-    if (noti === true) {
-      let price = 0;
-      try {
-        price = await getPrice(data.symbol);
-        price = `<a href='https://www.binance.com/en/trade/${data.baseAsset}_USDT?layout=pro'>${price}</a>`;
-      } catch (err) {
-        price = "not available"
-        logError(err)
-      }
-
-      message += ` Current price is ${price}.`;
-      notify(message);
+    socket.onerror = function(e) {
+      logError(e);
     }
-  })
 
-  socket.onerror = function(e) {
-    logError(e);
+    socket.onclose = function (e) {
+      logError(e);
+      setTimeout(() => monitorAbnormalTradingNotices(), 0)
+    }
   }
 
-  socket.onclose = function (e) {
-    logError(e);
-    setTimeout(() => monitorAbnormalTradingNotices(), 0)
-  }
 }
 
 monitorAbnormalTradingNotices();

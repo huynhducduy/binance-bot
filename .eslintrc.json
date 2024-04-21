@@ -1,7 +1,11 @@
 {
   "extends": "eslint:recommended",
+  "languageOptions": {
+    "parserOptions": {
+      "ecmaVersion": "latest"
+    }
+  },
   "env": {
-    "es2021": true,
     "node": true,
     "commonjs": true
   }

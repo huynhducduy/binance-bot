@@ -1,5 +1,7 @@
 # Binance Bot
 
+Require: `bun`
+
 ## Build image
 
 ```sh
@@ -23,16 +25,16 @@ docker kill binance-bot
 
 ## Deploy on Fly.io
 
-Make sure `internal_port` match
+Make sure `internal_port` match, currently using `--local-only` for faster build time, can switch to `--remote-only`
 
 ```sh
-fly deploy && fly scale count 1
+fly deploy --local-only && fly scale count 1
 ```
 
 ## Config Telegram Bot
 
 Deploy the bot with the supported port on ipv4: `443`, `80`, `88`, `8443`; Add a domain name;
-Add `149.154.160.0/20` and `91.108.4.0/22` to accepted incoming subnet
+Add `149.154.160.0/20` and `91.108.4.0/22` to accept incoming subnet
 Add SSL/TLS support
 Make a POST request to `https://api.telegram.org/bot<token>/setWebhook`
 

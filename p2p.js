@@ -1,6 +1,3 @@
-require('dotenv').config()
-process.send = process.send || function () {};
-
 const telegramBotKey = process.env.TELEGRAM_PC_BOT_KEY;
 const channelChatId = process.env.TELEGRAM_P2PPC_CHAT_ID;
 const threshold = 50;
@@ -25,8 +22,6 @@ function notify(text) {
     })
   }).catch(e => logError(e));
 }
-
-const fetch = require('node-fetch');
 
 const data = [{
   asset: 'USDT',

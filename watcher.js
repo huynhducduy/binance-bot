@@ -1,19 +1,16 @@
-const fs = require('fs');
-const WebSocket = require('isomorphic-ws')
-const fetch = require('node-fetch');
 const path = require('path');
-const key = path.join(__dirname, '..', 'secure', 'key.pem')
-const cert = path.join(__dirname, '..', 'secure', 'cert.pem')
+const key = Bun.file(path.join(__dirname, '..', 'secure', 'key.pem'))
+const cert = Bun.file(path.join(__dirname, '..', 'secure', 'cert.pem'))
+
+const https = (await key.exists()) && (await cert.exists()) ? {
+    key: key.textSync(),
+    cert: cert.textSync(),
+  } : undefined
 
 const fastify = require('fastify')({
-  https: fs.existsSync(key) && fs.existsSync(cert) ? {
-    key: fs.readFileSync(key),
-    cert: fs.readFileSync(cert),
-  } : undefined
+  https: https
 })
 
-const { spawn } = require( 'child_process' );
-require('dotenv').config()
 process.send = process.send || function () {};
 
 const telegramBotKey = process.env.TELEGRAM_PC_BOT_KEY;
@@ -96,7 +93,9 @@ const price = {}
 const messsagesToSend = []
 
 function processMessage(streamName, data) {
-  price[streamName] = parseFloat(data.p)
+  if (data && data.p) {
+    price[streamName] = parseFloat(data.p)
+  }
 }
 
 function monitor(e = 'BTC', threshold = 1) {
@@ -145,7 +144,7 @@ function monitor(e = 'BTC', threshold = 1) {
     }
 
     // Big change
-    if (diffs > (threshold / 100) || diffs < -(threshold / 100)) {
+    if (diffs > (threshold / 10) || diffs < -(threshold / 10)) {
       // Send notify
       const positive = `+${threshold}%`
       const negative = `-${threshold}%`
@@ -182,7 +181,7 @@ function monitor(e = 'BTC', threshold = 1) {
 }
 
 // Global variable
-let watchList = JSON.parse(fs.readFileSync('./data/watcher.json'))
+let watchList = JSON.parse(await Bun.file('./data/watcher.json').text())
 
 async function onExiting(cmdChatId) {
   notify("<i>Shutting down...</i>")
@@ -272,12 +271,14 @@ let cleanedUp = false;
 process.on('SIGINT', function() {
   if (!cleanedUp) {
     cleanedUp = true;
-    fs.writeFileSync('./data/watcher.json', JSON.stringify(watchList.map(e => ({
-      name: e.name,
-      threshold: e.threshold,
-    }))));
-    notify("<b>Server is stopped!</b>").finally(function() {
-      process.exit(0)
-    })
+    (async function() {
+      await Bun.write('./data/watcher.json', JSON.stringify(watchList.map(e => ({
+        name: e.name,
+        threshold: e.threshold,
+      }))));
+      notify("<b>Server is stopped!</b>").finally(function() {
+        process.exit(0)
+      })
+    })();
   }
 })
