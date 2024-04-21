@@ -1,4 +1,9 @@
-const path = require('path');
+import path from 'path'
+import { createSendMessage } from './src/utils/telegram/sendMessage'
+import logError from './src/utils/logError'
+
+//----------------------------------------------------------------------------------------------------------------------
+
 const key = Bun.file(path.join(__dirname, '..', 'secure', 'key.pem'))
 const cert = Bun.file(path.join(__dirname, '..', 'secure', 'cert.pem'))
 
@@ -16,46 +21,24 @@ process.send = process.send || function () {};
 const telegramBotKey = process.env.TELEGRAM_PC_BOT_KEY;
 const channelChatId = process.env.TELEGRAM_PC_CHAT_ID;
 
-const uri = `https://api.telegram.org/bot${telegramBotKey}`;
+const replyTo = createSendMessage(telegramBotKey)
 
-function logError(message, e) {
-  console.error(`ERROR: ${message}`, e);
-}
+const notify = (text) => replyTo(channelChatId, text)
 
-function notify(text) {
-  // For local test
-  // console.log('NOTIFY:', text)
-  // return Promise.resolve()
-  return fetch(`${uri}/sendMessage`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      chat_id: channelChatId,
-      text: text,
-      parse_mode: "html",
-      disable_web_page_preview: true,
-    })
-  }).catch(e => logError('notify', e));
-}
-
-function replyTo(chatId, text) {
-  return fetch(`${uri}/sendMessage`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text: text,
-      parse_mode: "html",
-      disable_web_page_preview: true,
-    })
-  }).catch(e => logError('reply', e));
-}
+//----------------------------------------------------------------------------------------------------------------------
 
 let socket = null
+
+let id = 1
+const price = {}
+const messsagesToSend = []
+let watchList = JSON.parse(await Bun.file('./data/watcher.json').text())
+
+function processMessage(streamName, data) {
+  if (data && data.p) {
+    price[streamName] = parseFloat(data.p)
+  }
+}
 
 function connect() {
   return new Promise((resolve) => {
@@ -86,16 +69,6 @@ function connect() {
       resolve()
     }
   })
-}
-
-let id = 1
-const price = {}
-const messsagesToSend = []
-
-function processMessage(streamName, data) {
-  if (data && data.p) {
-    price[streamName] = parseFloat(data.p)
-  }
 }
 
 function monitor(e = 'BTC', threshold = 1) {
@@ -179,9 +152,6 @@ function monitor(e = 'BTC', threshold = 1) {
 
   return { stopWatchers }
 }
-
-// Global variable
-let watchList = JSON.parse(await Bun.file('./data/watcher.json').text())
 
 async function onExiting(cmdChatId) {
   notify("<i>Shutting down...</i>")

@@ -1,29 +1,19 @@
+import sendMessage from "./src/utils/telegram/sendMessage";
+import logError from "./src/utils/logError";
+
+//----------------------------------------------------------------------------------------------------------------------
+
 const telegramBotKey = process.env.TELEGRAM_AT_BOT_KEY;
 const channelChatId = process.env.TELEGRAM_AT_CHAT_ID;
 const coinmarketcapMapUrl = 'https://api.coinmarketcap.com/data-api/v3/map/all?listing_status=active';
 
-const uri = `https://api.telegram.org/bot${telegramBotKey}`;
-
 //----------------------------------------------------------------------------------------------------------------------
 
-function logError(e) {
-  console.error(`ERROR: ${e.toString()}`);
+function notify(text) {
+  sendMessage(telegramBotKey, channelChatId, text);
 }
 
-function notify(text) {
-  fetch(`${uri}/sendMessage`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      chat_id: channelChatId,
-      text: text,
-      parse_mode: "html",
-      disable_web_page_preview: true,
-    })
-  }).catch(e => logError(e));
-}
+//----------------------------------------------------------------------------------------------------------------------
 
 function getCoinmarketcapMap() {
   return new Promise((resolve, reject) => {
@@ -41,7 +31,7 @@ function getCoinmarketcapMap() {
         resolve(mapData);
       })
       .catch(err => {
-        logError(err);
+        logError('getCoinmarketcapMap', err);
         reject(err);
       });
   })
@@ -55,7 +45,7 @@ function getPrice(symbol) {
         resolve(Number(data.price).toString());
       })
       .catch(err => {
-        logError(err);
+        logError('getPrice', err);
         reject(err);
       });
   })
@@ -171,7 +161,7 @@ async function monitorAbnormalTradingNotices() {
             price = `<a href='https://www.binance.com/en/trade/${data.baseAsset}_USDT?layout=pro'>${price}</a>`;
           } catch (err) {
             price = "not available"
-            logError(err)
+            logError('price', err)
           }
 
           message += ` Current price is ${price}.`;
@@ -181,11 +171,11 @@ async function monitorAbnormalTradingNotices() {
     }
 
     socket.onerror = function(e) {
-      logError(e);
+      logError('socket', e);
     }
 
     socket.onclose = function (e) {
-      logError(e);
+      logError('socket close', e);
       setTimeout(() => monitorAbnormalTradingNotices(), 0)
     }
   }

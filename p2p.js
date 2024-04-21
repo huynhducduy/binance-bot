@@ -1,27 +1,16 @@
+import sendMessage from "./src/utils/telegram/sendMessage";
+
+//----------------------------------------------------------------------------------------------------------------------
+
 const telegramBotKey = process.env.TELEGRAM_PC_BOT_KEY;
 const channelChatId = process.env.TELEGRAM_P2PPC_CHAT_ID;
 const threshold = 50;
 
-const uri = `https://api.telegram.org/bot${telegramBotKey}`;
-
-function logError(e) {
-  console.error(`ERROR: ${e.toString()}`);
-}
-
 function notify(text) {
-  return fetch(`${uri}/sendMessage`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      chat_id: channelChatId,
-      text: text,
-      parse_mode: "html",
-      disable_web_page_preview: true,
-    })
-  }).catch(e => logError(e));
+  sendMessage(telegramBotKey, channelChatId, text);
 }
+
+//----------------------------------------------------------------------------------------------------------------------
 
 const data = [{
   asset: 'USDT',
