@@ -56,4 +56,5 @@ async function setWebhook(token, url = "") {
 
 ## TODO
 
+- Use `Fly.io volume storage`
 - Use `elysiajs` instead of `fastify`
